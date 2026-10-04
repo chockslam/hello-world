@@ -1,0 +1,35 @@
+name: ChatGPT UniBo exam pack
+
+on:
+  push:
+    branches:
+      - chatgpt-unibo-exams-20261005
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download public CartaBinaria repository
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 3 \
+            https://github.com/cartabinaria/fundamentals-of-artificial-intelligence-and-knowledge-representation/archive/refs/heads/main.zip \
+            -o /tmp/source.zip
+          unzip -q /tmp/source.zip -d /tmp/source
+          EXAMS=$(find /tmp/source -type d -name exams -print -quit)
+          test -n "$EXAMS"
+          mkdir -p /tmp/pack/exams
+          cp "$EXAMS"/*.pdf /tmp/pack/exams/
+          COUNT=$(find /tmp/pack/exams -maxdepth 1 -type f -name '*.pdf' | wc -l)
+          echo "PDF count: $COUNT"
+          test "$COUNT" -eq 25
+          (cd /tmp/pack && sha256sum exams/*.pdf > SHA256SUMS.txt)
+          (cd /tmp/pack && zip -qr /tmp/Unibo_FAIKR_All_Exam_Papers.zip exams SHA256SUMS.txt)
+
+      - name: Upload exam ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: unibo-faikr-exams
+          path: /tmp/Unibo_FAIKR_All_Exam_Papers.zip
+          if-no-files-found: error
+          retention-days: 1
